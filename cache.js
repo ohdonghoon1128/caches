@@ -49,9 +49,13 @@ class CircularDQ {
         return this.dummy.prev;
     }
 
-    //add new key at the beginning of this circular DQ
-    addFirst(key) {
-        const node = new Node(key, this.dummy, this.dummy.next);
+    //add new node at the beginning of this circular DQ
+    addFirst(node) {
+        if(!(node instanceof Node)) {
+            throw new Error(`Illegal Argument Exception: arg(${typeof node}) must be type of Node`);
+        }
+        node.prev = this.dummy;
+        node.next = this.dummy.next;
 
         this.dummy.next.prev = node;
         this.dummy.next = node;
@@ -59,9 +63,13 @@ class CircularDQ {
     }
 
     //add new key at the end of this circular DQ
-    addLast(key) {
-        const node = new Node(key, this.dummy.prev, this.dummy);
-        
+    addLast(node) {
+        if(!(node instanceof Node)) {
+            throw new Error(`Illegal Argument Exception: arg(${typeof node}) must be type of Node`);
+        }
+        node.prev = this.dummy.prev;
+        node.next = this.dummy;
+
         this.dummy.prev.next = node;
         this.dummy.prev = node;
         this._size++;
@@ -73,14 +81,15 @@ class CircularDQ {
             throw new Error(`No Such Element Exception: cannot remove from empty deque`);
         }
 
-        const removedKey = this.dummy.next.key;
-        const nextNode = this.dummy.next.next;
-
-        this.dummy.next = nextNode;
-        nextNode.prev = this.dummy;
+        const removedNode = this.dummy.next;
+        this.dummy.next = removedNode.next;
+        removedNode.next.prev = this.dummy;
         this._size--;
 
-        return removedKey;
+        //delete the reference before return this node for safety
+        removedNode.prev = removedNode.next = undefined;
+
+        return removedNode;
     }
 
     //remove item at the end of this circular DQ
@@ -89,14 +98,15 @@ class CircularDQ {
             throw new Error(`No Such Element Exception: cannot remove from empty deque`);
         }
 
-        const removedKey = this.dummy.prev.key;
-        const prevNode = this.dummy.prev.prev;
-
-        this.dummy.prev = prevNode;
-        prevNode.next = this.dummy;
+        const removedNode = this.dummy.prev;
+        this.dummy.prev = removedNode.prev;
+        removedNode.prev.next = this.dummy;
         this._size--;
 
-        return removedKey;
+        //delete the reference before return this node for safety
+        removedNode.prev = removedNode.next = undefined;
+
+        return removedNode;
     }
 
     /*
@@ -138,10 +148,17 @@ class FIFO {
             throw new Error(`Illegal Argument Exception: arg(${max}) must be positive integer`);
         }
         this._MAX_MEMORY = max;    //in byte
-        this._usedMemory = 0;    //in byte
-        this._freeMemory = max;
+        this._freeMemory = max;    //in byte
         this._cache = new Map();
         this._priority = new CircularDQ;
+    }
+
+    maxMemorySize() {
+        return this._MAX_MEMORY;
+    }
+
+    freeMemorySize() {
+        return this._freeMemory;
     }
 
     /*
@@ -172,7 +189,7 @@ class FIFO {
         }
 
         /*
-            if cache already contains the key, remove content from cache, but we keep the key in priority
+            if cache already contains the key, remove content from cache, but we keep the key where it was originally in priority
         */
         let val = this._cache.get(key);
         if(val) {
@@ -183,8 +200,7 @@ class FIFO {
 
         //while there is not enough memory space, free memory
         while(this._freeMemory < size) {
-            //const node = this._priority.peekFirst();
-            //this.remove(node.key);
+            //remove from both hash table and queue
             this.remove(this._priority.peekFirst().key);
         }
 
@@ -193,7 +209,7 @@ class FIFO {
             val.size = size;
             val.content = content;
         } else {
-            this._priority.addLast(key);
+            this._priority.addLast(new Node(key));
             this._cache.set(key, new Item(this._priority.peekLast(), size, content));
         }
         this._freeMemory -= size;
@@ -229,10 +245,17 @@ class LIFO {
             throw new Error(`Illegal Argument Exception: arg(${max}) must be positive integer`);
         }
         this._MAX_MEMORY = max;    //in byte
-        this._usedMemory = 0;    //in byte
         this._freeMemory = max;    //in byte
         this._cache = new Map();
         this._priority = new CircularDQ;
+    }
+
+    maxMemorySize() {
+        return this._MAX_MEMORY;
+    }
+
+    freeMemorySize() {
+        return this._freeMemory;
     }
 
     /*
@@ -284,7 +307,7 @@ class LIFO {
             val.size = size;
             val.content = content;
         } else {
-            this._priority.addFirst(key);
+            this._priority.addFirst(new Node(key));
             this._cache.set(key, new Item(this._priority.peekFirst(), size, content));
         }
         this._freeMemory -= size;
@@ -320,10 +343,17 @@ class LRU {
             throw new Error(`Illegal Argument Exception: arg(${max}) must be positive integer`);
         }
         this._MAX_MEMORY = max;    //in byte
-        this._usedMemory = 0;    //in byte
         this._freeMemory = max;    //in byte
         this._cache = new Map();
         this._priority = new CircularDQ;
+    }
+
+    maxMemorySize() {
+        return this._MAX_MEMORY;
+    }
+
+    freeMemorySize() {
+        return this._freeMemory;
     }
 
     /*
@@ -346,13 +376,7 @@ class LRU {
         //delete node from priority queue and insert to the end
         const node = val.node;
         this._priority.remove(node);
-        
-        //insert this statement into method of CircularDQ **********************************
-        node.prev = this._priority._dummy.prev;
-        node.next = this._priority._dummy;
-        this._priority._dummy.prev.next = node;
-        this._priority._dummy.prev = node;
-        this._priority._size++;
+        this._priority.addLast(node);
 
         return val.content;
     }
@@ -377,7 +401,7 @@ class LRU {
             this.remove(this._priority.peekFirst().key);
         }
 
-        this._priority.addLast(key);
+        this._priority.addLast(new Node(key));
         this._cache.set(key, new Item(this._priority.peekLast(), size, content));
         this._freeMemory -= size;
     }
@@ -407,5 +431,5 @@ class LRU {
 module.exports = {
     FIFO: FIFO,
     LIFO: LIFO,
-    LRU: LRU,
+    LRU: LRU
 };
