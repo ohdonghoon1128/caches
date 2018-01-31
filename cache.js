@@ -16,11 +16,11 @@ class Node {
 */
 class CircularDQ {
     constructor() {
-        this.dummy = new Node();
+        this._dummy = new Node();
         this._size = 0;
 
         //dummy pointing to itself, when dq is empty
-        this.dummy.next = this.dummy.prev = this.dummy;
+        this._dummy.next = this._dummy.prev = this._dummy;
     }
 
     isEmpty() {
@@ -37,7 +37,7 @@ class CircularDQ {
             throw new Error(`No Such Element Exception: cannot peek from empty deque`);
         }
 
-        return this.dummy.next;
+        return this._dummy.next;
     }
 
     //get the last node of this circular DQ
@@ -46,7 +46,7 @@ class CircularDQ {
             throw new Error(`No Such Element Exception: cannot peek from empty deque`);
         }
         
-        return this.dummy.prev;
+        return this._dummy.prev;
     }
 
     //add new node at the beginning of this circular DQ
@@ -54,11 +54,11 @@ class CircularDQ {
         if(!(node instanceof Node)) {
             throw new Error(`Illegal Argument Exception: arg(${typeof node}) must be type of Node`);
         }
-        node.prev = this.dummy;
-        node.next = this.dummy.next;
+        node.prev = this._dummy;
+        node.next = this._dummy.next;
 
-        this.dummy.next.prev = node;
-        this.dummy.next = node;
+        this._dummy.next.prev = node;
+        this._dummy.next = node;
         this._size++;
     }
 
@@ -67,11 +67,11 @@ class CircularDQ {
         if(!(node instanceof Node)) {
             throw new Error(`Illegal Argument Exception: arg(${typeof node}) must be type of Node`);
         }
-        node.prev = this.dummy.prev;
-        node.next = this.dummy;
+        node.prev = this._dummy.prev;
+        node.next = this._dummy;
 
-        this.dummy.prev.next = node;
-        this.dummy.prev = node;
+        this._dummy.prev.next = node;
+        this._dummy.prev = node;
         this._size++;
     }
 
@@ -81,9 +81,9 @@ class CircularDQ {
             throw new Error(`No Such Element Exception: cannot remove from empty deque`);
         }
 
-        const removedNode = this.dummy.next;
-        this.dummy.next = removedNode.next;
-        removedNode.next.prev = this.dummy;
+        const removedNode = this._dummy.next;
+        this._dummy.next = removedNode.next;
+        removedNode.next.prev = this._dummy;
         this._size--;
 
         //delete the reference before return this node for safety
@@ -98,9 +98,9 @@ class CircularDQ {
             throw new Error(`No Such Element Exception: cannot remove from empty deque`);
         }
 
-        const removedNode = this.dummy.prev;
-        this.dummy.prev = removedNode.prev;
-        removedNode.prev.next = this.dummy;
+        const removedNode = this._dummy.prev;
+        this._dummy.prev = removedNode.prev;
+        removedNode.prev.next = this._dummy;
         this._size--;
 
         //delete the reference before return this node for safety
@@ -124,6 +124,23 @@ class CircularDQ {
         node.next.prev = node.prev;
         node.prev.next = node.next;
         this._size--;
+    }
+
+    [Symbol.iterator]() {
+        const dummy = this._dummy;
+        let i = dummy.next;
+
+        return {
+            next() {
+                if(i === dummy) {
+                    return {value: undefined, done: true};
+                } else {
+                    const value = i.key;
+                    i = i.next;
+                    return {value: value, done: false};
+                }
+            }
+        }
     }
 }
 
@@ -234,6 +251,10 @@ class FIFO {
         //remove the item from the cache
         this._cache.delete(key);
     }
+
+    [Symbol.iterator]() {
+        return this._priority[Symbol.iterator]();
+    }
 }
 
 /*
@@ -332,6 +353,10 @@ class LIFO {
         //remove the item from the cache
         this._cache.delete(key);
     }
+
+    [Symbol.iterator]() {
+        return this._priority[Symbol.iterator]();
+    }
 }
 
 /*
@@ -424,6 +449,10 @@ class LRU {
         this._priority.remove(val.node);
         //remove the item from the cache
         this._cache.delete(key);
+    }
+
+    [Symbol.iterator]() {
+        return this._priority[Symbol.iterator]();
     }
 }
 
